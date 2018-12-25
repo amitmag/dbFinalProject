@@ -57,9 +57,10 @@ public class HistoryController extends ParentController {
     public void insertToHistory(@RequestParam("username") String username, @RequestParam("title") String title,
                                 HttpServletResponse response) {
         System.out.println(username + " " + title);
+        MongoClient mongoClient = null;
         try {
             // Create Mongo Client
-            MongoClient mongoClient = new MongoClient("localhost", 27017);
+            mongoClient = new MongoClient("localhost", 27017);
             MongoDatabase db = mongoClient.getDatabase("projectDB");
 
             // Create history collection
@@ -287,7 +288,7 @@ public class HistoryController extends ParentController {
         HashSet<String> users = new HashSet<>();
         // Add all usernames to Set
         for (User user : arr1) {
-            users.add(user.getUsername());
+        	users.add(user.getUsername());
         }
         // Add only distinct values to array
         for (User user : arr2) {
@@ -305,7 +306,7 @@ public class HistoryController extends ParentController {
      */
     private int getIntersectionSize(User[] arr1, User[] arr2) {
         HashSet<String> users = new HashSet<>();
-        int intersectionSize = 0;
+        HashSet<String> intersections = new HashSet<>();
         // Add all usernames to Set
         for (User user : arr1) {
             users.add(user.getUsername());
@@ -313,9 +314,9 @@ public class HistoryController extends ParentController {
         // Check for common values
         for (User user : arr2) {
             if (users.contains(user.getUsername()))
-                intersectionSize++;
+            	intersections.add(user.getUsername());
         }
-        return intersectionSize;
+        return intersections.size();
     }
 
     // Check if user exist in DB
