@@ -46,7 +46,7 @@ public class RegistarationController extends ParentController {
 	 * HttpStatus in HttpServletResponse should be set to HttpStatus.CONFLICT, else
 	 * insert the user to the system and set to HttpStatus in HttpServletResponse
 	 * HttpStatus.OK
-	 * 
+	 *
 	 * @param username
 	 * @param password
 	 * @param firstName
@@ -55,30 +55,39 @@ public class RegistarationController extends ParentController {
 	 */
 	@RequestMapping(value = "register_new_customer", method = { RequestMethod.POST })
 	public void registerNewUser(@RequestParam("username") String username, @RequestParam("password") String password,
-			@RequestParam("firstName") String firstName, @RequestParam("lastName") String lastName,
-			HttpServletResponse response) {
+								@RequestParam("firstName") String firstName, @RequestParam("lastName") String lastName,
+								HttpServletResponse response) {
 		System.out.println(username + " " + password + " " + lastName + " " + firstName);
-		// :TODO your implementation
-		// Creating a Mongo client
+
 		try {
+			// In case the user already exist, show error to the user
 			if (isExistUser(username)) {
 				HttpStatus status = HttpStatus.CONFLICT;
 				response.setStatus(status.value());
 			} else {
+				// Create Mongo client
 				MongoClient mongoClient = new MongoClient("localhost", 27017);
 				MongoDatabase db = mongoClient.getDatabase("projectDB");
+
+				// Create Users collection
 				MongoCollection<Document> collection = db.getCollection("USERS");
+
+				// Create user document and add to users collection
 				Document document = new Document("username", username).append("password", password)
 						.append("firstName", firstName).append("lastName", lastName)
 						.append("RegistrationDate", new Date());
 				collection.insertOne(document);
 				System.out.println("Document inserted successfully");
+
+				//Close DB connection and send OK message to the user
 				mongoClient.close();
 				HttpStatus status = HttpStatus.OK;
 				response.setStatus(status.value());
 			}
 		} catch (Exception e) {
 			System.out.println(e);
+			HttpStatus status = HttpStatus.CONFLICT;
+			response.setStatus(status.value());
 		}
 
 	}
@@ -86,7 +95,7 @@ public class RegistarationController extends ParentController {
 	/**
 	 * The function returns true if the received username exist in the system
 	 * otherwise false
-	 * 
+	 *
 	 * @param username
 	 * @return
 	 * @throws IOException
@@ -97,14 +106,22 @@ public class RegistarationController extends ParentController {
 		boolean result = true;
 		MongoClient mongoClient = null;
 		try {
+			// Create Mongo client
 			mongoClient = new MongoClient("localhost", 27017);
 			MongoDatabase db = mongoClient.getDatabase("projectDB");
+
+			// Create Users collection and user document
 			MongoCollection<Document> collection = db.getCollection("USERS");
 			Document myDoc = collection.find(eq("username", username)).first();
+
+			//In case no document in the collection match the condition, the user not exist in the DB
 			if (myDoc == null) {
 				mongoClient.close();
 				return false;
 			}
+
+			//Close DB connection
+			mongoClient.close();
 
 		} catch (Exception e) {
 			mongoClient.close();
@@ -116,7 +133,7 @@ public class RegistarationController extends ParentController {
 	/**
 	 * The function returns true if the received username and password match a
 	 * system storage entry, otherwise false
-	 * 
+	 *
 	 * @param username
 	 * @return
 	 * @throws IOException
@@ -128,17 +145,26 @@ public class RegistarationController extends ParentController {
 		boolean result = false;
 		MongoClient mongoClient = null;
 		try {
+			// Create Mongo client
 			mongoClient = new MongoClient("localhost", 27017);
 			MongoDatabase db = mongoClient.getDatabase("projectDB");
+
+			// Create Users collection and user document
 			MongoCollection<Document> collection = db.getCollection("USERS");
 			Document myDoc = collection.find(eq("username", username)).first();
+
+			// No user in the collection with the given username
 			if (myDoc == null) {
 				mongoClient.close();
 				return false;
-			} else {
+			} else { // Check for password
 				mongoClient.close();
-				return myDoc.get("password").equals(password);
+				result =  myDoc.get("password").equals(password);
 			}
+
+			//Close DB connection
+			mongoClient.close();
+
 		} catch (Exception e) {
 			mongoClient.close();
 			System.out.println(e);
@@ -148,7 +174,7 @@ public class RegistarationController extends ParentController {
 
 	/**
 	 * The function retrieves number of the registered users in the past n days
-	 * 
+	 *
 	 * @param days
 	 * @return
 	 * @throws IOException
@@ -158,23 +184,33 @@ public class RegistarationController extends ParentController {
 	public int getNumberOfRegistredUsers(@RequestParam("days") int days) throws IOException {
 		System.out.println(days + "");
 		int result = 0;
-		// :TODO your implementation
 		MongoClient mongoClient = null;
 		try {
+			// Create the date before n days
 			Date startDate = new Date();
 			startDate.setDate(startDate.getDate() - days);
 			startDate.setHours(0);
 			startDate.setMinutes(0);
 			startDate.setSeconds(0);
+
+			// Create Mongo client
 			mongoClient = new MongoClient("localhost", 27017);
 			MongoDatabase db = mongoClient.getDatabase("projectDB");
+
+			// Create Users collection
 			MongoCollection<Document> collection = db.getCollection("USERS");
+
+			// Get all user before n days
 			FindIterable<Document> iterDoc = collection.find(gt("RegistrationDate", startDate));
 			Iterator it = iterDoc.iterator();
 			while (it.hasNext()) {
 				it.next();
 				result++;
 			}
+
+			// Close DB connection
+			mongoClient.close();
+
 		} catch (Exception e) {
 			mongoClient.close();
 			System.out.println(e);
@@ -185,7 +221,7 @@ public class RegistarationController extends ParentController {
 
 	/**
 	 * The function retrieves all the users
-	 * 
+	 *
 	 * @return
 	 */
 	@RequestMapping(value = "get_all_users", headers = "Accept=*/*", method = {
@@ -196,10 +232,15 @@ public class RegistarationController extends ParentController {
 		ArrayList<User> users = new ArrayList<>();
 		MongoClient mongoClient = null;
 		try {
+			// Create Mongo client
 			mongoClient = new MongoClient("localhost", 27017);
 			MongoDatabase db = mongoClient.getDatabase("projectDB");
+
+			// Create Users collection
 			MongoCollection<Document> collection = db.getCollection("USERS");
 			FindIterable<Document> iterDoc = collection.find();
+
+			// Create all users collection
 			int i = 1;
 			Iterator it = iterDoc.iterator();
 			while (it.hasNext()) {
@@ -209,10 +250,16 @@ public class RegistarationController extends ParentController {
 				users.add(user);
 			}
 
+			// Close DB connection
+			mongoClient.close();
+
+
 		} catch (Exception e) {
 			mongoClient.close();
 			System.out.println(e);
 		}
+
+		// Insert list to array
 		User[] usersArray = new User[users.size()];
 		users.toArray(usersArray);
 		return usersArray;
